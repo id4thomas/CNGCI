@@ -103,6 +103,7 @@ class DefeasibleGenDataset(Dataset):
 		encoded = self.tokenizer(
 			input_text,
 			max_length = self.max_length,
+			padding = "max_length",
 			truncation = True,
 			return_tensors = "pt"
 		)

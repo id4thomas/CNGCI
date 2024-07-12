@@ -12,8 +12,6 @@ if os.environ["WANDB_ENTITY"]:
 	USE_WANDB = True
 	from utils.log_utils import wandb_set
 
-import torch
-
 from transformers import (
 	PreTrainedTokenizerBase,
 	AutoTokenizer,
@@ -23,6 +21,7 @@ from transformers import (
 	DataCollatorForLanguageModeling
 )
 
+from utils.peft_utils import get_lora_config, load_peft_model
 from utils.data_utils import read_defeasible_inf_records, DefeasibleGenDataset
 from utils.hf_argparser import HfArgumentParser
 
@@ -51,6 +50,7 @@ def train(config: Dict[str, Dict]):
 
 	## Load Model, Tokenizer
 	pretrained_model_name = training_config["pretrained_model"]
+
 	tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name)
 	tokenizer.pad_token = tokenizer.eos_token
 	tokenizer.add_tokens(["[premise]","[hypo]","[strengthener]","[weakener]"])
@@ -64,6 +64,19 @@ def train(config: Dict[str, Dict]):
 	else:
 		model = AutoModelForCausalLM.from_pretrained(pretrained_model_name)
 	model.resize_token_embeddings(len(tokenizer))
+
+	## Peft Model
+	if training_config.get("peft", None):
+		peft_config = training_config["peft"]
+		lora_config = get_lora_config(
+			lora_r = peft_config.get("lora_r", 8),
+			lora_alpha = peft_config.get("lora_alpha", 16),
+			lora_dropout = peft_config.get("lora_dropout", 0.1),
+			target_modules = peft_config.get("target_modules", ["c_attn"])
+		)
+		model = load_peft_model(model, lora_config)
+		print("LOADED LORA MODEL")
+		
 	if training_config.get("enable_bettertransformer", False):
 		model = model.to_bettertransformer()
 		print("Applied bettertransformer")
