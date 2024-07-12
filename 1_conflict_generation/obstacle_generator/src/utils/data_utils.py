@@ -12,7 +12,7 @@ INPUT_TEMPLATE = {
 }
 
 def read_jsonl_file(fname):
-	with open(fname) as f:
+	with open(fname, "r") as f:
 		lines = f.readlines()
 	data = [json.loads(l.strip()) for l in lines]
 	return data
@@ -89,13 +89,13 @@ class DefeasibleGenDataset(Dataset):
 		return self._num_records
 
 	def __getitem__(self, idx: int):
-		hypothesis = self.records["hypothesis"]
-		update = self.records["update"]
+		hypothesis = self.records["hypothesis"][idx]
+		update = self.records["update"][idx]
 		contents = {"h": hypothesis, "u": update}
 		if self.mode=="phu":
-			contents["p"] = self.records["premise"]
+			contents["p"] = self.records["premise"][idx]
 
-		label = self.records["update_type"]
+		label = self.records["update_type"][idx]
 		contents["u_type"] = label
 		input_text = self.input_template.format(**contents)
 

@@ -55,12 +55,18 @@ def train(config: Dict[str, Dict]):
 	tokenizer.pad_token = tokenizer.eos_token
 	tokenizer.add_tokens(["[premise]","[hypo]","[strengthener]","[weakener]"])
 
-	model = AutoModelForCausalLM.from_pretrained(
-		pretrained_model_name,
-		attn_implementation="flash_attention_2"
-	)
+	if training_config.get("enable_flash_attn2", False):
+		model = AutoModelForCausalLM.from_pretrained(
+			pretrained_model_name,
+			attn_implementation="flash_attention_2"
+		)
+		print("Applied flash-attn2")
+	else:
+		model = AutoModelForCausalLM.from_pretrained(pretrained_model_name)
 	model.resize_token_embeddings(len(tokenizer))
-	model = model.to_bettertransformer()
+	if training_config.get("enable_bettertransformer", False):
+		model = model.to_bettertransformer()
+		print("Applied bettertransformer")
 	print("Loaded Model, Tokenizer")
 
 	## Load Data
