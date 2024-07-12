@@ -1,0 +1,36 @@
+{
+	"data": {
+		"data_dir": "data/defeasible-nli/defeasible-atomic",
+		"train_fname": "train.jsonl",
+		"val_fname": "dev.jsonl",
+		"test_fname": "test.jsonl",
+		"load":{
+			"skip_impossible": true,
+			"only_use_weakeners": true,
+			"mode": "phu",
+			"max_length": 256
+		}
+	},
+	"training": {
+		"run_name": "obstacle-generator",
+		"pretrained_model": "gpt2-xl",
+		"learning_rate": 1e-5,
+		"per_device_batch_size": 32,
+		"gradient_accumulation_steps": 1,
+		"label_smoothing_factor": 0,
+		"save_strategy": "epoch",
+		"save_total_limit": 3,
+		"evaluation_strategy": "steps",
+		"logging_steps": 80,
+		"disable_tqdm": false,
+		"report_to": ["wandb"],
+		"seed": 100,
+		"fp16": false,
+		"bf16": true,
+		"remove_unsued_columns": false
+	},
+	"logging": {
+		"weight_dir": "weights",
+		"log_dir": "logs"
+	}
+}
