@@ -3,9 +3,10 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 from tqdm import tqdm
-from src.subject_extractor import SubjectExtractor, determine_subject_change
-from src.nli_predictor import NLIPredictor
 from src.story_dataclasses import CommonsenseRelation, StorySentence, ConflictStory
+
+from src.modules.nli_predictor import NLIPredictor
+from src.modules.subject_extractor import SubjectExtractor, determine_subject_change
 #################### Implication-based rules  ####################
 class ImplicationRuleScorer(object):
 	def __init__(

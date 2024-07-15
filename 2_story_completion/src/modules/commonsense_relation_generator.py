@@ -13,8 +13,9 @@ from transformers import (
 	PreTrainedModel
 )
 
-from src.text_generator import TextGenerator
-from src.sentence_embedder import SentenceEmbedder
+from src.modules.text_generator import TextGenerator
+from src.modules.sentence_embedder import SentenceEmbedder
+
 from src.story_dataclasses import CommonsenseRelation
 
 CATEGORIES = ['oEffect', 'oReact', 'oWant', 'xAttr', 'xEffect', 'xIntent', 'xNeed', 'xReact', 'xWant']
