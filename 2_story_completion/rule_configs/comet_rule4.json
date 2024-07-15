@@ -1,0 +1,83 @@
+{
+	"weights": {
+		"significance": {
+			"context": 1.0,
+			"obstacle": 0.5,
+			"preceding": 0.5
+		},
+		"position": {
+			"context": [1.0, 0.775, 0.55, 0.325, 0.1],
+			"obstacle": [1.0, 0.775, 0.55, 0.325, 0.1],
+			"preceding": 0.6
+		}
+	},
+	"implication": {
+		"context": {
+			"changed_subject": [
+				["oReact", "xReact", "entailment"],
+				["xReact", "oReact", "entailment"]
+			],
+			"same_subject": [
+				["oReact", "oReact", "entailment"],
+				["xAttr", "xAttr", "entailment"],
+				["xReact", "xReact", "entailment"]
+			]
+		},
+		"obstacle_later": {
+			"changed_subject": [
+				["oEffect", "xEffect", "entailment"],
+				["xEffect", "oEffect", "entailment"],
+				["oReact", "xReact", "strong entailment"],
+				["xReact", "oReact", "strong entailment"],
+				["oWant", "xWant", "entailment"]
+			],
+			"same_subject": [
+				["oEffect", "oEffect", "entailment"],
+				["oReact", "oReact", "strong entailment"],
+				["xAttr", "xAttr", "strong entailment"],
+				["xEffect", "xEffect", "entailment"],
+				["xIntent", "xIntent", "entailment"],
+				["xNeed", "xNeed", "entailment"],
+				["xReact", "xReact", "strong entailment"],
+				["xWant", "xWant", "entailment"]
+			]
+		},
+		"obstacle_earlier": {
+			"changed_subject": [
+				["oWant", "oWant", "contradiction"],
+				["xWant", "xWant", "contradiction"],
+				["oEffect", "xIntent", "entailment"],
+				["oReact", "xIntent", "entailment"]
+			],
+			"same_subject": [
+				["oWant", "xWant", "contradiction"],
+				["xWant", "oWant", "contradiction"],
+				["xEffect", "xIntent", "entailment"],
+				["xReact", "xIntent", "entailment"]
+			]
+		},
+		"preceding": {
+			"changed_subject": [
+				["oReact", "xReact", "entailment"],
+				["xReact", "oReact", "entailment"]
+			],
+			"same_subject": [
+				["oReact", "oReact", "entailment"],
+				["xAttr", "xAttr", "entailment"],
+				["xReact", "xReact", "entailment"]
+			]
+		}
+	},
+	"similarity": {
+		"changed_subject": [
+			["oEffect", "xNeed", 0.5],
+            ["oReact", "xAttr", 0.5],
+            ["oWant", "xIntent", 0.5]
+		],
+		"same_subject": [
+			["xEffect", "xNeed", 0.5],
+            ["xReact", "xAttr", 0.5],
+            ["xWant", "xIntent", 0.5]
+		]
+	}
+}
