@@ -26,6 +26,7 @@ class TextGenerator(object):
 			tokenizer = tokenizer,
 			device = device
 		)
+		self.tokenizer = tokenizer
 		self.generation_mode = generation_mode
 
 	def _generate_text(self, text: List[str], decode_params: dict, batch_size: int = 1) -> List[List[str]]:

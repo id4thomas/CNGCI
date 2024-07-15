@@ -9,7 +9,7 @@ from transformers import (
 	PreTrainedModel
 )
 
-from src.text_generator import TextGenerator
+from src.modules.text_generator import TextGenerator
 from src.story_dataclasses import StorySentence, ConflictStory
 
 class NextSentenceCandidateGenerator(TextGenerator):
@@ -29,33 +29,16 @@ class NextSentenceCandidateGenerator(TextGenerator):
 
 	def generate(
 		self,
-		contexts: List[str],
-		obstacles: List[str],
-		previous_sentences: List[List[str]],
+		story: ConflictStory,
 		decode_params: dict
-	):
-		candidates = self._generate_candidates(contexts, obstacles, previous_sentences, decode_params=decode_params)
-		return candidates
+	) -> List[str]:
+		input_text = self._make_candidate_gen_input(story = story)
+		generated_texts = self._generate_text([input_text], decode_params)[0]
+		candiates = list(map(self._get_first_sentence, generated_texts))
+		return candiates
 
-	def _make_candidate_gen_input(self,):
+	def _make_candidate_gen_input(self, story: ConflictStory) -> str:
 		raise NotImplementedError("This method needs to be implemented")
-
-	def _generate_candidates(
-		self, 
-		contexts: List[str], 
-		obstacles: List[str],
-		previous_sentences: List[List[str]],
-		decode_params: dict
-	) -> List[List[str]]:
-		input_texts = [self._make_defeasible_gen_input(c, o, p) for c,o,p in zip(contexts, goals)]
-		generated_texts = self._generate_text(input_texts, decode_params)
-
-		## only get first sentences
-		candidates = []
-		for sample_generated_texts in generated_texts:
-			sample_obstacles = list(map(self._get_first_sentence, sample_generated_texts))
-			obstacles.append(sample_obstacles)
-		return obstacles
 
 	def _get_first_sentence(self, text: str):
 		sentences = sent_tokenize(text)
@@ -66,7 +49,7 @@ class LMNextSentenceCandidateGenerator(NextSentenceCandidateGenerator):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 	
-	def _make_candidate_gen_input(self, story: ConflictStory):
+	def _make_candidate_gen_input(self, story: ConflictStory) -> str:
 		'''
 		Sentence Order: Context, ..., Obstacle, ...
 		template: bos_token + context+ " " + ... + " " + obstacle + " " + ...
@@ -82,7 +65,7 @@ class ObsLM245NextSentenceCandidateGenerator(NextSentenceCandidateGenerator):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 
-	def _make_candidate_gen_input(self, story: ConflictStory):
+	def _make_candidate_gen_input(self, story: ConflictStory) -> str:
 		'''
 		Sentence Order: Context, Obstacle, S2, S4, S5 (if S3 is Obstacle)
 		template: bos_token + context+ " " + obs + " " + preceding_generations
