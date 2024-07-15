@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -201,8 +201,8 @@ class ImplicationRuleScorer(object):
 		relation2_values = relation2.values
 		
 		## Make Pairwise NLI Predictor Input
-		check_is_none = lambda x: x!="none"
-		paired_values = [[r1, r2] for r2 in filter(check_is_none, relation2_values) for r1 in filter(check_is_none, relation1_values)]
+		check_is_not_none = lambda x: x!="none"
+		paired_values = [[r1, r2] for r2 in filter(check_is_not_none, relation2_values) for r1 in filter(check_is_none, relation1_values)]
 		if len(paired_values)==0:
 			return 0.0
 
@@ -238,10 +238,10 @@ class ImplicationRuleScorer(object):
 			position_weight = self.position_weight_rules["context"][abs_dist]
 			significance_weight = self.significance_weight_rules["context"]
 		elif comparing_sentence_type=="obstacle":
-			position_weight = self.postition_weight_rules["obstacle"][abs_dist]
+			position_weight = self.position_weight_rules["obstacle"][abs_dist]
 			significance_weight = self.significance_weight_rules["obstacle"]
 		else:
-			position_weight = self.postition_weight_rules["preceding"]
+			position_weight = self.position_weight_rules["preceding"]
 			significance_weight = self.significance_weight_rules["preceding"]
 		return position_weight*significance_weight
 
@@ -249,28 +249,15 @@ class ImplicationRuleScorer(object):
 def calculate_pairwise_cosine_similarity(x,y):
 	'''
 	shape:
-	x: (n_samples_X, n_dim)
-	y: (n_samples_Y, n_dim)
+	x: (n_samples_x, n_dim)
+	y: (n_samples_y, n_dim)
 	->
-	(n_samples_X, n_samples_Y)
+	(n_samples_x, n_samples_y)
 	'''
-	return cosine_similarity(X, Y)
-
-def calculate_relation_pair_similarity_score(relation1: CommonsenseRelation, relation2: CommonsenseRelation) -> float:
-	'''
-	Similarity-based rules
-	calculate relation-level pairwise similarity calculation
-	* rel1, rel2 each has k rel sentences
-	* final similarity score: k*k pairwise calculation of similarity -> mean
-	'''
-	pairwise_similarities = calculate_pairwise_cosine_similarity(
-		relation1.embeddings, relation2.embeddings
-	)
-	## Calculate mean
-	return np.mean(pairwise_similarities)
+	return cosine_similarity(x, y)
 
 class SimilarityRuleScorer(object):
-	def __init__(self, rules: dict):
+	def __init__(self, rules: dict, subject_extractor: SubjectExtractor,):
 		'''
 		Rule Format
 		{
@@ -287,36 +274,102 @@ class SimilarityRuleScorer(object):
 		self.same_subject_rules = rules["same_subject"]
 		self.changed_subject_rules = rules["changed_subject"]
 
+		self.subject_extractor = subject_extractor
+
 	def calculate_score(
 		self, 
-		target_sentence: StorySentence,
-		candidate_sentence: StorySentence, ## next sentence candidate
+		story: ConflictStory,
+		candidate_sentence_idx: int
 	) -> float:
+		## Determine NLI Rule with information
+		subjects = self._get_subjects(story)
+		comparing_sentence_idx = self._determine_comparing_sentence_idx(
+			story = story,
+			candidate_sentence_idx = candidate_sentence_idx
+		)
+		is_subject_changed = self._determine_is_subject_changed(
+			subjects = subjects,
+			candidate_sentence_idx = candidate_sentence_idx,
+			comparing_sentence_idx = comparing_sentence_idx
+		)
+
 		## check subject character change
-		target_subject = target_sentence.character
-		candidate_subject = candidate_sentence.character
-		if _determine_subject_change(target_subject, candidate_subject):
+		if is_subject_changed:
 			rules = self.changed_subject_rules
 		else:
 			rules = self.same_subject_rules
 
+		##
+		comparing_sentence = story.sentences[comparing_sentence_idx]
+		candidate_sentence = story.sentences[candidate_sentence_idx]
+
 		## Calculate Score
 		pair_scores = []
-		for target_relation_type, candidate_relation_type, threshold in rules:
-			target_relation: CommonsenseRelation = target_sentence.commonsense_relations[target_relation_type]
+		for comparing_relation_type, candidate_relation_type, threshold in rules:
+			comparing_relation: CommonsenseRelation = comparing_sentence.commonsense_relations[comparing_relation_type]
 			candidate_relation: CommonsenseRelation = candidate_sentence.commonsense_relations[candidate_relation_type]
-			pair_similarity_score = calculate_relation_pair_similarity_score(target_relation, candidate_relation)
-
-			if pair_similarity_score > threshold:
-				score = 1
-			else:
-				score = 0
-			pair_scores.append(pair_score)
+			pair_similarity_score = self._calculate_relation_pair_score(
+				relation1 = comparing_relation,
+				relation2 = candidate_relation, 
+				threshold = threshold
+			)
+			print("PAIR {} - {}: {:.4f}".format(comparing_relation_type, candidate_relation_type, pair_similarity_score))
+			pair_scores.append(pair_similarity_score)
 		score = np.mean(pair_scores) ## average across relation types
 		return score
+	
+	def _get_subjects(self, story: ConflictStory) -> List[dict]:
+		story_sentences = [story.sentences[i].value for i in range(story.num_sentences)]
+		subjects = self.subject_extractor.get_subjects(story_sentences)
+		return subjects
 
-	def _determine_subject_change(self, target_subject: str, candidate_subject: str):
-		if target_subject!=candidate_subject:
-			return True
-		else:
-			return False
+	def _determine_comparing_sentence_idx(
+		self, story: ConflictStory, candidate_sentence_idx: int,
+	) -> int:
+		comparing_sentence_idx = candidate_sentence_idx-1
+		return comparing_sentence_idx
+
+	def _determine_is_subject_changed(
+		self, subjects: List[dict], candidate_sentence_idx: int, comparing_sentence_idx: int
+	) -> bool:
+		## determine subject change
+		is_subject_changed = determine_subject_change(
+			subjects = subjects,
+			idx1 = candidate_sentence_idx,
+			idx2 = comparing_sentence_idx
+		)
+		return is_subject_changed
+
+	def _calculate_relation_pair_score(
+		self,
+		relation1: CommonsenseRelation,
+		relation2: CommonsenseRelation,
+		threshold: float
+	) -> float:
+		'''
+		r1*r2 number of input embeddings (pairwise)
+		* (r1, dim) vs (r2, dim)
+		-> calculate ratio of "entailment"/"contradicted" predicted input to check satisfactions
+		Final score is 1.0 if satisfied, 0.0 if not
+		'''
+		relation1_values = relation1.values
+		relation2_values = relation2.values
+		
+		## Make Pairwise NLI Predictor Input
+		check_is_not_none = lambda x: x!="none"
+		# print(relation1_values, relation2_values)
+		relation1_nonempty_idxs = [i for i, val in enumerate(relation1_values) if check_is_not_none(val)]
+		relation2_nonempty_idxs = [i for i, val in enumerate(relation2_values) if check_is_not_none(val)]
+		# print(len(relation1_nonempty_idxs), len(relation2_nonempty_idxs))
+		if len(relation1_nonempty_idxs)==0 or len(relation2_nonempty_idxs)==0:
+			return 0.0
+
+		pairwise_similarities = calculate_pairwise_cosine_similarity(
+			relation1.embeddings[relation1_nonempty_idxs, :],
+			relation2.embeddings[relation2_nonempty_idxs, :]
+		)
+		print("PAIRWISE", pairwise_similarities.shape)
+		pairwise_similarity_scores = np.ones_like(pairwise_similarities)
+		pairwise_similarity_scores[pairwise_similarities<threshold] = 0.0
+		pair_similarity_score = np.mean(pairwise_similarity_scores)
+		return pair_similarity_score
