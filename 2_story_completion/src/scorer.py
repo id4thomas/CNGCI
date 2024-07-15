@@ -2,7 +2,8 @@ from typing import List
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-from src.subject_detector import SubjectExtractor, determine_subject_change
+from tqdm import tqdm
+from src.subject_extractor import SubjectExtractor, determine_subject_change
 from src.nli_predictor import NLIPredictor
 from src.story_dataclasses import CommonsenseRelation, StorySentence, ConflictStory
 #################### Implication-based rules  ####################
@@ -12,7 +13,8 @@ class ImplicationRuleScorer(object):
 		nli_rules: dict,
 		weight_rules: dict,
 		subject_extractor: SubjectExtractor,
-		nli_predictor: NLIPredictor
+		nli_predictor: NLIPredictor,
+		nli_predictor_batch_size: int
 	):
 		'''
 		Rule format:
@@ -33,19 +35,20 @@ class ImplicationRuleScorer(object):
 		}
 		'''
 		## NLI Rules
-		self.context_nli_rules = rules["context"]
-		self.obstacle_later_nli_rules = rules["obstacle_later"]
-		self.obstacle_earlier_nli_rules = rules["obstacle_earlier"] ## s4, s5
-		self.preceding_nli_rules = rules["preceding"]
+		self.context_nli_rules = nli_rules["context"]
+		self.obstacle_later_nli_rules = nli_rules["obstacle_later"]
+		self.obstacle_earlier_nli_rules = nli_rules["obstacle_earlier"] ## s4, s5
+		self.preceding_nli_rules = nli_rules["preceding"]
 
 		## Weight Rules
 		# significance
 		self.significance_weight_rules = weight_rules["significance"]
 		# position
-		self.postition_weight_rules = weight_rules["position"]
+		self.position_weight_rules = weight_rules["position"]
 
 		self.subject_extractor = subject_extractor
 		self.nli_predictor = nli_predictor
+		self.nli_predictor_batch_size = nli_predictor_batch_size
 
 	def calculate_score(
 		self, 
@@ -57,7 +60,8 @@ class ImplicationRuleScorer(object):
 		subjects = self._get_subjects(story)
 		comparing_sentence_idx = self._determine_comparing_sentence_idx(
 			story = story,
-			comparing_sentence_type=comparing_sentence_type
+			comparing_sentence_type=comparing_sentence_type,
+			candidate_sentence_idx = candidate_sentence_idx
 		)
 		is_obstacle_earlier = self._determine_is_obstacle_earlier(story=story, candidate_sentence_idx=candidate_sentence_idx)
 		is_subject_changed = self._determine_is_subject_changed(
@@ -71,18 +75,19 @@ class ImplicationRuleScorer(object):
 			is_subject_changed=is_subject_changed
 		)
 		## Apply nli rule to calculate scores - NLI prediction
-		score = score_with_nli_rules(
+		score = self._score_with_nli_rules(
 			comparing_sentence = story.sentences[comparing_sentence_idx],
 			candidate_sentence = story.sentences[candidate_sentence_idx],
 			rules = nli_rules
 		)
-
+		print("NLI Score: {:.4f}".format(score))
 		## get weights
 		weight = self.get_weight(
 			comparing_sentence_type = comparing_sentence_type,
 			candidate_sentence_idx = candidate_sentence_idx,
 			comparing_sentence_idx = comparing_sentence_idx
 		)
+		print("Weight: {:.4f}".format(weight))
 		return score * weight
 		
 	### Subject Condition
@@ -98,7 +103,7 @@ class ImplicationRuleScorer(object):
 			comparing_sentence_idx = candidate_sentence_idx-1
 		elif comparing_sentence_type=="obstacle":
 			comparing_sentence_idx = story.obstacle_idx
-		elif comparing_sentence_type=="preceding":
+		elif comparing_sentence_type=="context":
 			comparing_sentence_idx = story.context_idx
 		else:
 			raise Exception("Comparing sentence type {} not defined".format(comparing_sentence_type))
@@ -148,7 +153,7 @@ class ImplicationRuleScorer(object):
 		return rules
 
 	## Applying Rules
-	def score_with_nli_rules(
+	def _score_with_nli_rules(
 		self,
 		comparing_sentence: StorySentence,
 		candidate_sentence: StorySentence,
@@ -162,17 +167,16 @@ class ImplicationRuleScorer(object):
 		]
 		'''
 		rule_scores = []
-		for cmp_relation_type, cand_relation_type, nli_cond in rules:
+		for cmp_relation_type, cand_relation_type, nli_cond in tqdm(rules):
 			##
 			cmp_relation = comparing_sentence.commonsense_relations[cmp_relation_type]
 			cand_relation = candidate_sentence.commonsense_relations[cand_relation_type]
-
 			relation_pair_score = self._calculate_relation_pair_score(
 				relation1 = cmp_relation,
 				relation2 = cand_relation,
 				condition = nli_cond
 			)
-			rule_scores.append(rule_scores)
+			rule_scores.append(relation_pair_score)
 		
 		## Average??? - TODO: inquire hyunju
 		score = np.mean(rule_scores)
@@ -196,13 +200,14 @@ class ImplicationRuleScorer(object):
 		relation2_values = relation2.values
 		
 		## Make Pairwise NLI Predictor Input
-		check_is_none = lambda x: x=="none"
+		check_is_none = lambda x: x!="none"
 		paired_values = [[r1, r2] for r2 in filter(check_is_none, relation2_values) for r1 in filter(check_is_none, relation1_values)]
 		if len(paired_values)==0:
 			return 0.0
 
 		# ['entailment', ...]
-		predicted: List[str] = self.nli_predictor.predict(texts = paired_values)
+		print("NLI Predictor input", len(paired_values))
+		predicted: List[str] = self.nli_predictor.predict(texts = paired_values, batch_size = self.nli_predictor_batch_size)
 
 		## ratio of entailment, contradiction, neutral
 		entailment_ratio = predicted.count('entailment') / len(predicted)

@@ -1,5 +1,6 @@
 import itertools
-from typing import Tuple, List
+from typing import Tuple, List, Dict
+
 import spacy
 import neuralcoref
 from nltk.tokenize import sent_tokenize
@@ -65,7 +66,8 @@ class CommonsenseRelationGenerator(object):
 		self,
 		comet_model: PreTrainedModel,
 		comet_tokenizer: PreTrainedTokenizerBase,
-		embedding_model: nn.Module,
+		embedding_model: PreTrainedModel,
+		embedding_tokenizer: PreTrainedTokenizerBase,
 		device: torch.device = torch.device('cuda')
 	):
 		self.relation_sentence_generator = CommonsenseRelationSentenceGenerator(
@@ -74,7 +76,11 @@ class CommonsenseRelationGenerator(object):
 			device = device
 		)
 
-		self.embedder = SentenceEmbedder(model = model, device = device)
+		self.embedder = SentenceEmbedder(
+			model = embedding_model,
+			tokenizer = embedding_tokenizer,
+			device = device
+		)
 		
 	def generate(
 		self,
@@ -83,10 +89,10 @@ class CommonsenseRelationGenerator(object):
 		decode_params: dict,
 		text_generator_batch_size: int = 8,
 		text_embedder_batch_size: int = 8
-	) -> List[CommonsenseRelation]:
+	) -> Dict[str, CommonsenseRelation]:
 		# list of relation sentences per relation
 
-		relation_sentences: List[List[str]] = self.CommonsenseRelationSentenceGenerator(
+		relation_sentences: List[List[str]] = self.relation_sentence_generator.generate(
 			text = text,
 			relation_types = relation_types,
 			decode_params = decode_params,
@@ -94,7 +100,7 @@ class CommonsenseRelationGenerator(object):
 		)
 
 		## Embed
-		embedding_input_texts: List[str] = itertools.chain(*relation_sentences)
+		embedding_input_texts: List[str] = list(itertools.chain(*relation_sentences))
 		embeddings: np.array = self.embedder.embed(
 			texts = embedding_input_texts,
 			batch_size = text_embedder_batch_size,
@@ -104,15 +110,14 @@ class CommonsenseRelationGenerator(object):
 
 		## Unpack Embeddings
 		idx = 0
-		relations = []
+		relations = {}
 		for relation_type, type_sentences in zip(relation_types, relation_sentences):
 			relation = CommonsenseRelation(
 				relation_type = relation_type,
 				values = type_sentences,
 				embeddings = embeddings[idx:idx+len(type_sentences)]
 			)
-			relations.append(relation)
-
+			relations[relation_type] = relation
 		return relations
 
 if __name__=="__main__":
