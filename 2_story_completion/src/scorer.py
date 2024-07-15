@@ -202,7 +202,7 @@ class ImplicationRuleScorer(object):
 		
 		## Make Pairwise NLI Predictor Input
 		check_is_not_none = lambda x: x!="none"
-		paired_values = [[r1, r2] for r2 in filter(check_is_not_none, relation2_values) for r1 in filter(check_is_none, relation1_values)]
+		paired_values = [[r1, r2] for r2 in filter(check_is_not_none, relation2_values) for r1 in filter(check_is_not_none, relation1_values)]
 		if len(paired_values)==0:
 			return 0.0
 
