@@ -1,0 +1,35 @@
+{
+	"rule_dir": "rule_configs/comet_rule4.json",
+	"candidate_generator": {
+		"model_dir": "weights/roc_finetune_obs_lm_245_001",
+		"decode_params": {
+			"num_beams": 10,
+			"num_beam_groups": 5,
+			"num_return_sequences": 5,
+			"repetition_penalty": 10.0,
+			"diversity_penalty": 10.0,
+			"max_new_tokens": 128,
+			"early_stopping": true
+		},
+		"device": "cuda:0"
+	},
+	"commonsense_generator": {
+		"model_dir": "weights/comet-atomic_2020_BART",
+		"decode_params": {"num_beams": 5, "num_return_sequences": 5},
+		"device": "cuda:0",
+		"batch_size": 16
+	},
+	"embedder": {
+		"model_dir": "sentence-transformers/all-MiniLM-L6-v2",
+		"device": "cuda:0",
+		"batch_size": 64
+	},
+	"nli": {
+		"model_dir": "cross-encoder/nli-distilroberta-base",
+		"device": "cuda:0",
+		"batch_size": 128
+	},
+	"subject_extractor": {
+		"spacy_model": "en_core_web_sm"
+	}
+}

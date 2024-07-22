@@ -43,6 +43,8 @@ class NextSentenceCandidateGenerator(TextGenerator):
 	def _get_first_sentence(self, text: str):
 		sentences = sent_tokenize(text)
 		first_sentence = sentences[0].strip()
+		if first_sentence[-1] not in [".", "!", "?"]:
+			first_sentence = first_sentence+"."
 		return first_sentence	
 
 class LMNextSentenceCandidateGenerator(NextSentenceCandidateGenerator):
