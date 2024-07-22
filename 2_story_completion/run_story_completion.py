@@ -212,8 +212,7 @@ for i in tqdm(range(df.shape[0])):
 
 	story = generate_story(
 		context = row['context'],
-		obstacle = row['obstacle'],
-		config = config
+		obstacle = row['obstacle']
 	)
 
 	## Make Processed Dict
