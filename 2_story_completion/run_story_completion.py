@@ -216,7 +216,7 @@ for i in tqdm(range(df.shape[0])):
 	)
 
 	## Make Processed Dict
-	generated_dict['obs_id'].append(row['obs_id'])
+	generated_dict['id'].append(row['id'])
 	generated_dict['context'].append(row['context'])
 	generated_dict['goal'].append(row['goal'])
 	generated_dict['obstacle'].append(row['obstacle'])
