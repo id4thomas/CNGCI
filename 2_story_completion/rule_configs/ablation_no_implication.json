@@ -12,7 +12,7 @@
 		}
 	},
 	"implication": {
-		"enable": true,
+		"enable": false,
 		"context": {
 			"changed_subject": [
 				["oReact", "xReact", "entailment"],

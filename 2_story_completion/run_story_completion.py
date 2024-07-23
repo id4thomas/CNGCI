@@ -76,18 +76,18 @@ print("Loaded nli predictor")
 ## RULE SCORERS
 rule_dir = config['rule_dir']
 with open(rule_dir, "r") as f:
-	rules = json.load(f)
+	RULES = json.load(f)
 
 implication_scorer = ImplicationRuleScorer(
-	nli_rules = rules["implication"],
-	weight_rules = rules["weights"],
+	nli_rules = RULES["implication"],
+	weight_rules = RULES["weights"],
 	subject_extractor = subject_extractor,
 	nli_predictor = nli_predictor,
 	nli_predictor_batch_size = config['nli']['batch_size']
 )
 
 similarity_scorer = SimilarityRuleScorer(
-	rules = rules["similarity"],
+	rules = RULES["similarity"],
 	subject_extractor = subject_extractor
 )
 
@@ -127,25 +127,33 @@ def evaluate_candidate(
 	candidate_story.num_sentences = story.num_sentences+1
 	candidate_story.sentences[candidate_idx] = candidate_sentence
 	## Calculate Rule
-	implication_context_score = implication_scorer.calculate_score(
-		story = candidate_story,
-		candidate_sentence_idx=candidate_idx,
-		comparing_sentence_type="context"
-	)
-	implication_obstacle_score = implication_scorer.calculate_score(
-		story = candidate_story,
-		candidate_sentence_idx=candidate_idx,
-		comparing_sentence_type="obstacle"
-	)
-	implication_preceding_score = implication_scorer.calculate_score(
-		story = candidate_story,
-		candidate_sentence_idx=candidate_idx,
-		comparing_sentence_type="preceding"
-	)
-	similarity_score = similarity_scorer.calculate_score(
-		story = candidate_story,
-		candidate_sentence_idx=candidate_idx
-	)
+	if RULES['implication']['enable']:
+		implication_context_score = implication_scorer.calculate_score(
+			story = candidate_story,
+			candidate_sentence_idx=candidate_idx,
+			comparing_sentence_type="context"
+		)
+		implication_obstacle_score = implication_scorer.calculate_score(
+			story = candidate_story,
+			candidate_sentence_idx=candidate_idx,
+			comparing_sentence_type="obstacle"
+		)
+		implication_preceding_score = implication_scorer.calculate_score(
+			story = candidate_story,
+			candidate_sentence_idx=candidate_idx,
+			comparing_sentence_type="preceding"
+		)
+	else:
+		implication_context_score = 0
+		implication_obstacle_score = 0
+		implication_preceding_score = 0
+	if RULES['similarity']['enable']:
+		similarity_score = similarity_scorer.calculate_score(
+			story = candidate_story,
+			candidate_sentence_idx=candidate_idx
+		)
+	else:
+		similarity_score = 0
 	score = implication_context_score + implication_obstacle_score + implication_preceding_score + similarity_score
 	del candidate_story
 	return score
