@@ -72,7 +72,8 @@ class ObsLM245NextSentenceCandidateGenerator(NextSentenceCandidateGenerator):
 		Sentence Order: Context, Obstacle, S2, S4, S5 (if S3 is Obstacle)
 		template: bos_token + context+ " " + obs + " " + preceding_generations
 		'''
-		prefix_template = '{bos}{context} {obstacle}'
+		# prefix_template = '{bos}{context} {obstacle}'
+		prefix_template = '{bos}initial: {context} obstacle: {obstacle} story: '
 		prefix = prefix_template.format(
 			bos = self.tokenizer.bos_token,
 			context = story.sentences[story.context_idx].value,
