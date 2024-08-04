@@ -32,6 +32,8 @@ class TextGenerator(object):
 	def _generate_text(self, text: List[str], decode_params: dict, batch_size: int = 1) -> List[List[str]]:
 		if self.generation_mode=="text":
 			decode_params["return_full_text"] = False
+		if self.tokenizer.eos_token_id:
+			decode_params["eos_token_id"] = self.tokenizer.eos_token_id
 
 		with torch.no_grad():
 			generated = self.generator(text, batch_size = batch_size, **decode_params)

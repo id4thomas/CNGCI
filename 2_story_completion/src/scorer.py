@@ -1,4 +1,7 @@
-from typing import List, Union
+import os
+CNGCI_DEBUG = True if os.getenv("CNGCI_DEBUG", False) else False
+
+from typing import List
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -81,14 +84,16 @@ class ImplicationRuleScorer(object):
 			candidate_sentence = story.sentences[candidate_sentence_idx],
 			rules = nli_rules
 		)
-		print("NLI Score: {:.4f}".format(score))
+		if CNGCI_DEBUG:
+			print("NLI Score: {:.4f}".format(score))
 		## get weights
 		weight = self.get_weight(
 			comparing_sentence_type = comparing_sentence_type,
 			candidate_sentence_idx = candidate_sentence_idx,
 			comparing_sentence_idx = comparing_sentence_idx
 		)
-		print("Weight: {:.4f}".format(weight))
+		if CNGCI_DEBUG:
+			print("Weight: {:.4f}".format(weight))
 		return score * weight
 		
 	### Subject Condition
@@ -144,7 +149,7 @@ class ImplicationRuleScorer(object):
 		elif comparing_sentence_type=="preceding":
 			comparing_type_rule = self.preceding_nli_rules
 		else:
-			raise Exception("target sentence type {} not defined".format(target_sentence.sentence_type))
+			raise Exception("comparing sentence type {} not defined".format(comparing_sentence_type))
 
 		## by subject change
 		if is_subject_changed:
@@ -207,7 +212,8 @@ class ImplicationRuleScorer(object):
 			return 0.0
 
 		# ['entailment', ...]
-		print("NLI Predictor input", len(paired_values))
+		if CNGCI_DEBUG:
+			print("NLI Predictor input", len(paired_values))
 		predicted: List[str] = self.nli_predictor.predict(texts = paired_values, batch_size = self.nli_predictor_batch_size)
 
 		## ratio of entailment, contradiction, neutral
@@ -313,7 +319,8 @@ class SimilarityRuleScorer(object):
 				relation2 = candidate_relation, 
 				threshold = threshold
 			)
-			print("PAIR {} - {}: {:.4f}".format(comparing_relation_type, candidate_relation_type, pair_similarity_score))
+			if CNGCI_DEBUG:
+				print("PAIR {} - {}: {:.4f}".format(comparing_relation_type, candidate_relation_type, pair_similarity_score))
 			pair_scores.append(pair_similarity_score)
 		score = np.mean(pair_scores) ## average across relation types
 		return score
@@ -368,7 +375,8 @@ class SimilarityRuleScorer(object):
 			relation1.embeddings[relation1_nonempty_idxs, :],
 			relation2.embeddings[relation2_nonempty_idxs, :]
 		)
-		print("PAIRWISE", pairwise_similarities.shape)
+		if CNGCI_DEBUG:
+			print("PAIRWISE", pairwise_similarities.shape)
 		pairwise_similarity_scores = np.ones_like(pairwise_similarities)
 		pairwise_similarity_scores[pairwise_similarities<threshold] = 0.0
 		pair_similarity_score = np.mean(pairwise_similarity_scores)

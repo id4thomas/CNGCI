@@ -18,7 +18,6 @@ from src.modules.loader import (
 	load_nli_predictor
 )
 from src.modules.commonsense_relation_generator import CATEGORIES
-from src.candidate_generator import ObsLM245NextSentenceCandidateGenerator
 from src.scorer import ImplicationRuleScorer, SimilarityRuleScorer
 
 from src.story_dataclasses import CommonsenseRelation, StorySentence, ConflictStory
@@ -42,19 +41,37 @@ with open(args.config_dir, "r") as f:
 	config = json.load(f)
 
 ## Load Modules
-candidate_gen_tokenizer = AutoTokenizer.from_pretrained("gpt2")
-candidate_gen_model = AutoModelForCausalLM.from_pretrained(
-	config['candidate_generator']['model_dir'],
-	torch_dtype=torch.bfloat16
-)
-candidate_gen_model.resize_token_embeddings(len(candidate_gen_tokenizer))
+candidate_gen_version = config['candidate_generator'].get("version", "v1")
+if candidate_gen_version=="v1":
+	from src.candidate_generator import ObsLM245NextSentenceCandidateGenerator
+	candidate_gen_tokenizer = AutoTokenizer.from_pretrained("gpt2")
+	candidate_gen_model = AutoModelForCausalLM.from_pretrained(
+		config['candidate_generator']['model_dir'],
+		torch_dtype=torch.bfloat16
+	)
+	candidate_gen_model.resize_token_embeddings(len(candidate_gen_tokenizer))
 
-generator = ObsLM245NextSentenceCandidateGenerator(
-	model = candidate_gen_model,
-	tokenizer = candidate_gen_tokenizer,
-	device = torch.device(config['candidate_generator']['device'])
-)
-print("Loaded candidate generator")
+	generator = ObsLM245NextSentenceCandidateGenerator(
+		model = candidate_gen_model,
+		tokenizer = candidate_gen_tokenizer,
+		device = torch.device(config['candidate_generator']['device'])
+	)
+elif candidate_gen_version=="v2":
+	from src.candidate_generator import ObsLM245NextSentenceCandidateGeneratorV2
+	candidate_gen_model_dir = config['candidate_generator']['model_dir']
+	candidate_gen_tokenizer = AutoTokenizer.from_pretrained(candidate_gen_model_dir)
+	candidate_gen_model = AutoModelForCausalLM.from_pretrained(
+		candidate_gen_model_dir,
+		torch_dtype=torch.bfloat16
+	)
+	generator = ObsLM245NextSentenceCandidateGeneratorV2(
+		model = candidate_gen_model,
+		tokenizer = candidate_gen_tokenizer,
+		device = torch.device(config['candidate_generator']['device'])
+	)
+else:
+	raise ValueError("candidate generator version {} not found".format(candidate_gen_version))
+print("Loaded candidate generator {}".format(candidate_gen_version))
 
 ## Comet Model
 commonsense_generator = load_commonsense_generator(
@@ -158,7 +175,7 @@ def evaluate_candidate(
 	del candidate_story
 	return score
 
-def generate_next_sentence(story: ConflictStory) -> StorySentence:
+def generate_next_sentence(story: ConflictStory, max_tries: int = 3) -> StorySentence:
 	## Determine candidate_idx
 	if story.num_sentences==2:
 		candidate_idx = 1
@@ -166,10 +183,17 @@ def generate_next_sentence(story: ConflictStory) -> StorySentence:
 		candidate_idx = story.num_sentences
 
 	decode_params = config['candidate_generator']['decode_params']
+	for try_i in range(max_tries):
+		candidates: List[str] = generator.generate(story = story, decode_params = decode_params)
+		## Filter empty candidates
+		candidates = list(filter(lambda x: len(x)>0, candidates))
+		if candidates:
+			break
+	if not candidates:
+		raise Exception("[generate_next_sentence] Max tried {}".format(max_tries))
 
-	candidates = generator.generate(story = story, decode_params = decode_params)
 	scores = []
-	for candidate in candidates:
+	for candidate in filter(lambda x: len(x)>0, candidates): ## Filter Empty candidates
 		candidate_sentence = make_story_sentence(idx = candidate_idx, value = candidate, sentence_type="other")
 		## Evaluate
 		score = evaluate_candidate(story=story, candidate_sentence=candidate_sentence, candidate_idx=candidate_idx)
