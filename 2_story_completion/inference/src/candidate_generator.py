@@ -1,3 +1,6 @@
+import os
+CNGCI_DEBUG = True if os.getenv("CNGCI_DEBUG", False) else False
+
 from typing import Tuple, List
 import spacy
 import neuralcoref
@@ -36,6 +39,8 @@ class NextSentenceCandidateGenerator(TextGenerator):
 		for i in range(5):
 			try:
 				generated_texts = self._generate_text([input_text], decode_params)[0]
+				if CNGCI_DEBUG:
+					print("TRY: {} - Generated {}".format(i, "\n".join(generated_texts)))
 				candidates = list(map(self._get_first_sentence, generated_texts))
 			except Exception as e:
 				if i!=4:
