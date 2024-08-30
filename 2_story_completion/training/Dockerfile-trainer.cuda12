@@ -1,0 +1,17 @@
+FROM candidate-generator-base:cuda121
+WORKDIR /workspace
+
+## Copy Data
+RUN mkdir /workspace/data
+COPY data/roc /workspace/data/roc
+COPY data/kb /workspace/data/kb
+
+## Copy Source
+COPY src /workspace/src
+COPY scripts/train.sh /workspace/train.sh
+RUN chmod +x /workspace/train.sh
+
+## Prepare Directories
+RUN mkdir /workspace/weights
+
+CMD ["./train.sh"]
