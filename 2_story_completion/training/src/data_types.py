@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Union, TypedDict
+from typing import Any, Dict, List, Union
 
 
-class KBData(TypedDict):
+@dataclass
+class KBData:
     """Knowledgebase data (atomic + conceptnet)"""
 
     atomic_file: str
@@ -10,7 +11,8 @@ class KBData(TypedDict):
     tokenization_config: Dict[str, Any]
 
 
-class ROCData(TypedDict):
+@dataclass
+class ROCData:
     """ROC Stories dataset"""
 
     file: str

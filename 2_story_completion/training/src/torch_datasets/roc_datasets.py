@@ -11,6 +11,7 @@ from data_types import ROCData
 class ROCDataset(Dataset):
 
     def __init__(self, data: ROCData, tokenizer: PreTrainedTokenizerBase):
+        print(data)
         df = pd.read_csv(data.file, sep="\t")
         self.sources = df.source.values.tolist()
         self.tokenizer = tokenizer
