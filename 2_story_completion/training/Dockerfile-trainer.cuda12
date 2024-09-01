@@ -3,8 +3,8 @@ WORKDIR /workspace
 
 ## Copy Data
 RUN mkdir /workspace/data
-COPY data/roc /workspace/data/roc
-COPY data/kb /workspace/data/kb
+# COPY data/roc /workspace/data/roc
+# COPY data/kb /workspace/data/kb/
 
 ## Copy Source
 COPY src /workspace/src

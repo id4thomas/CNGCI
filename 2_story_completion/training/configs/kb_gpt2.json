@@ -1,0 +1,56 @@
+{
+    "data": {
+        "mode": "kb",
+        "train": {
+            "atomic_file": "/workspace/data/kb/atomic-train.tsv",
+            "conceptnet_file": "/workspace/data/kb/conceptnet-train.tsv",
+            "tokenization_config": {
+                "max_length": 128,
+                "padding": "max_length",
+                "truncation": true
+            }
+        },
+        "val": {
+            "atomic_file": "/workspace/data/kb/atomic-val.tsv",
+            "conceptnet_file": "/workspace/data/kb/conceptnet-val.tsv",
+            "tokenization_config": {
+                "max_length": 128,
+                "padding": "max_length",
+                "truncation": true
+            }
+        }
+    },
+    "model": {
+        "pretrained_model": "gpt2",
+        "added_special_tokens": {
+            "eos_token": "<|eos|>",
+            "pad_token": "<|pad|>"
+        }
+    },
+    "trainer": {
+        "run_name": "kb_gpt2",
+        "epochs": 1,
+        "learning_rate": 6e-5,
+        "per_device_train_batch_size": 64,
+        "per_device_eval_batch_size": 64,
+        "gradient_accumulation_steps": 1,
+        "label_smoothing_factor": 0,
+        "save_strategy": "steps",
+        "save_steps": 500,
+        "save_total_limit": 2,
+        "evaluation_strategy": "steps",
+        "metric_for_best_model": "eval_loss",
+        "logging_steps": 500,
+        "disable_tqdm": false,
+        "report_to": [
+            "wandb"
+        ],
+        "seed": 100,
+        "fp16": false,
+        "bf16": true,
+        "remove_unused_columns": false
+    },
+    "result": {
+        "weight_dir": "/workspace/weights"
+    }
+}

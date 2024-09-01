@@ -22,6 +22,7 @@ docker run --gpus all \
 	-e WANDB_PROJECT=$WANDB_PROJECT \
 	-e WANDB_API_KEY=$WANDB_API_KEY \
 	-e HF_TOKEN=$HF_TOKEN \
+	-v data/roc:/workspace/data/roc \
 	-v ${BASE_MODEL_DIR}:/workspace/base_model \
 	-v ${CONFIG_DIR}:/workspace/config.json \
 	candidate-generator-trainer:cuda121 \

@@ -1,0 +1,59 @@
+{
+    "data": {
+        "mode": "roc",
+        "train": {
+            "file": "/workspace/data/roc/roc-train.tsv",
+            "tokenization_config": {
+                "max_length": 512,
+                "padding": "max_length",
+                "truncation": true
+            }
+        },
+        "val": {
+            "file": "/workspace/data/roc/roc-val.tsv",
+            "tokenization_config": {
+                "max_length": 512,
+                "padding": "max_length",
+                "truncation": true
+            }
+        }
+    },
+    "model": {
+        "pretrained_model": "/workspace/base_model",
+        "added_special_tokens": {
+            "eos_token": "<|eos|>",
+            "pad_token": "<|pad|>"
+        },
+        "added_tokens": [
+            "<ctx>",
+            "<obs>",
+            "<story>"
+        ]
+    },
+    "trainer": {
+        "run_name": "roc_gpt2_kb",
+        "max_steps": 5,
+        "learning_rate": 6e-5,
+        "per_device_train_batch_size": 32,
+        "per_device_eval_batch_size": 32,
+        "gradient_accumulation_steps": 1,
+        "label_smoothing_factor": 0,
+        "save_strategy": "steps",
+        "save_steps": 2,
+        "save_total_limit": 2,
+        "evaluation_strategy": "steps",
+        "metric_for_best_model": "eval_loss",
+        "logging_steps": 2,
+        "disable_tqdm": false,
+        "report_to": [
+            "wandb"
+        ],
+        "seed": 100,
+        "fp16": false,
+        "bf16": true,
+        "remove_unused_columns": false
+    },
+    "result": {
+        "weight_dir": "/workspace/weights"
+    }
+}
